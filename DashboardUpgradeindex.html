@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<title>Upgrade Assinatura e Registro Digital</title>
+<style>
+:root {
+  --primary:#0067ff;
+  --primary-strong:#0050cc;
+  --bg:#f6f8fc;
+  --card:#0a8cff;
+}
+body{
+  font-family:'Segoe UI',Arial,sans-serif;
+  margin:0;
+  padding:24px;
+  background:var(--bg)
+}
+h1{
+  color:var(--primary);
+  margin-bottom:16px;
+  font-size:28px
+}
+.tabs{display:flex;gap:12px;margin-bottom:20px}
+.tab{padding:10px 22px;border-radius:12px;background:#e3ecff;cursor:pointer;font-weight:600}
+.tab.active{background:var(--primary);color:#fff}
+
+.cards{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  gap:18px;
+  margin:8px 0 26px
+}
+.card{
+  background:linear-gradient(135deg,#009bff,#0067ff);
+  border-radius:18px;
+  padding:18px 22px;
+  color:#fff;
+  cursor:pointer;
+  box-shadow:0 10px 22px rgba(0,0,0,.12)
+}
+.card b{font-size:14px;opacity:.9}
+.card span{display:block;font-size:28px;font-weight:800;margin-top:4px}
+
+.table-wrap{
+  background:#fff;
+  border-radius:18px;
+  box-shadow:0 6px 22px rgba(0,0,0,.08);
+  overflow:hidden
+}
+table{width:100%;border-collapse:collapse}
+th{background:#d8ebff;color:#003580;font-weight:700}
+th,td{padding:14px;border-bottom:1px solid #edf0f6}
+tr:hover{background:#f4f8ff;cursor:pointer}
+
+.detail{
+  margin-top:26px;
+  border-left:6px solid var(--primary);
+  background:#fff;
+  border-radius:16px;
+  padding:22px;
+  box-shadow:0 6px 22px rgba(0,0,0,.08);
+  display:none
+}
+
+.toggle-edit{
+  position:fixed;
+  bottom:24px;
+  right:24px;
+  background:var(--primary);
+  color:#fff;
+  padding:12px 18px;
+  border-radius:40px;
+  font-weight:600;
+  cursor:pointer;
+  box-shadow:0 8px 22px rgba(0,0,0,.2)
+}
+.editor{
+  margin-top:34px;
+  padding-top:24px;
+  border-top:2px dashed #d6e4ff
+}
+input,select,textarea{width:100%;margin-bottom:10px;padding:10px;border-radius:10px;border:1px solid #ccc}
+button{padding:10px 18px;border:none;border-radius:12px;background:var(--primary);color:#fff;font-weight:600;cursor:pointer}
+button.secondary{background:#8fa6d8}
+button.danger{background:#d11a2a}
+.hidden{display:none}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
+.metric{background:#fff;border-radius:18px;padding:18px;box-shadow:0 6px 22px rgba(0,0,0,.08)}
+</style>
+</head>
+<body>
+<h1>Upgrade Assinatura e Registro Digital</h1>
+<div class="tabs">
+  <div class="tab active" onclick="openTab('entregas',this)">Entregas</div>
+  <div class="tab" onclick="openTab('resultados',this)">Resultados</div>
+</div>
+<section id="entregas">
+  <div class="cards" id="cards"></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Item</th><th>Status</th><th>PRD</th><th>Impacto</th></tr></thead>
+      <tbody id="tbl"></tbody>
+    </table>
+  </div>
+  <div class="detail" id="detail"></div>
+</section>
+<section id="resultados" class="hidden">
+  <div class="metrics" id="metrics"></div>
+</section>
+<div class="editor" id="editor">
+<h3>✏️ Editor de Item</h3>
+<input id="fItem" placeholder="Item" />
+<select id="fStatus"><option>Produção</option><option>Homologação</option><option>Discovery</option><option>Despriorizado</option></select>
+<input id="fPrd" placeholder="PRD" />
+<input id="fImpacto" placeholder="Impacto" />
+<textarea id="fResultado" placeholder="Resultado"></textarea>
+<button onclick="saveItem()">Salvar</button>
+<button class="danger" onclick="deleteItem()">Excluir</button>
+<button class="secondary" onclick="clearForm()">Limpar</button>
+</div>
+<div class="toggle-edit" onclick="toggleEdit()">✏️ Modo edição</div>
+<script>
+let items = JSON.parse(localStorage.getItem('items')) || [];
+items = items.map((i,idx)=>({...i,id:i.id??idx+Date.now()}));
+let filtered=items,selectedId=null,editorVisible=true;
+function persist(){localStorage.setItem('items',JSON.stringify(items));renderAll();}
+function renderCards(){cards.innerHTML='';cards.innerHTML+=`<div class='card' onclick="applyFilter('Todos')"><b>Total</b><span>${items.length}</span></div>`;[...new Set(items.map(i=>i.status))].forEach(s=>cards.innerHTML+=`<div class='card' onclick="applyFilter('${s}')"><b>${s}</b><span>${items.filter(i=>i.status===s).length}</span></div>`)}
+function applyFilter(s){filtered=s==='Todos'?items:items.filter(i=>i.status===s);renderTable();}
+function renderTable(){tbl.innerHTML='';filtered.forEach(i=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${i.item}</td><td>${i.status}</td><td>${i.prd}</td><td>${i.impacto}</td>`;tr.onclick=()=>selectItem(i.id);tbl.appendChild(tr)})}
+function selectItem(id){const i=items.find(x=>x.id===id);selectedId=id;detail.style.display='block';detail.innerHTML=`<h3>${i.item}</h3><p><b>Status:</b> ${i.status}<br><b>PRD:</b> ${i.prd}<br><b>Impacto:</b> ${i.impacto}<br><b>Resultado:</b> ${i.resultado||'-'}</p>`;fItem.value=i.item;fStatus.value=i.status;fPrd.value=i.prd;fImpacto.value=i.impacto;fResultado.value=i.resultado||''}
+function saveItem(){const obj={id:selectedId??Date.now(),item:fItem.value,status:fStatus.value,prd:fPrd.value,impacto:fImpacto.value,resultado:fResultado.value};const idx=items.findIndex(i=>i.id===obj.id);idx>-1?items[idx]=obj:items.push(obj);persist();clearForm();detail.style.display='none'}
+function deleteItem(){if(selectedId!=null){items=items.filter(i=>i.id!==selectedId);persist();clearForm();detail.style.display='none'}}
+function clearForm(){selectedId=null;fItem.value=fPrd.value=fImpacto.value=fResultado.value=''}
+function renderResults(){metrics.innerHTML='';items.filter(i=>i.resultado).forEach(i=>metrics.innerHTML+=`<div class='metric'><b>${i.item}</b><p>${i.resultado}</p></div>`)}
+function openTab(t,e){entregas.classList.toggle('hidden',t!=='entregas');resultados.classList.toggle('hidden',t!=='resultados');document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));e.classList.add('active')}
+function toggleEdit(){editorVisible=!editorVisible;editor.style.display=editorVisible?'block':'none'}
+function renderAll(){renderCards();applyFilter('Todos');renderResults()}
+renderAll();
+</script>
+</body>
+</html>
